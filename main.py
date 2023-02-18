@@ -72,6 +72,9 @@ BPOW_KEY = os.getenv('BPOW_KEY', None)
 BPOW_ENABLED = BPOW_KEY is not None
 BPOW_FOR_NANO = options.bpow_nano_difficulty
 
+# for nano.to's pow api
+NANO2_KEY = os.getenv('NANO2_KEY', None)
+
 work_futures = dict()
 
 async def init_bpow(app):
@@ -122,7 +125,12 @@ async def work_generate(hash, app, precache=False, difficulty=None, reward=True)
         request['difficulty'] = difficulty
     tasks = []
     for p in WORK_URLS:
-        tasks.append(json_post(p, request, app=app))                                
+        if "nano.to" in p:
+            request2 = dict(request)
+            request2["key"] = NANO2_KEY
+            tasks.append(json_post(p, request2, app=app))
+        else:
+            tasks.append(json_post(p, request, app=app))                         
     if BPOW_ENABLED and not precache:
         tasks.append(app['bpow'].request_work(hash, difficulty))
 
@@ -249,6 +257,10 @@ async def callback(request):
         await request.app['redis'].rpush(PRECACHE_Q_KEY, hash)
     return web.Response(status=200)
 
+
+async def health_check(request):
+    return web.Response(status=200)
+
 ### END API
 
 ### APP setup
@@ -299,6 +311,7 @@ async def get_app():
     app['failover_dt'] = None
     app.add_routes([web.post('/', rpc)])
     app.add_routes([web.post('/callback', callback)])
+    app.add_routes([web.post('/health', health_check)])
     app.on_startup.append(open_redis)
     app.on_startup.append(init_queue)
     app.on_startup.append(init_bpow)

@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: betsy-deployment
+  labels:
+    app: perish-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: perish-worker
+  template:
+    metadata:
+      labels:
+        app: perish-worker
+    spec:
+      containers:
+      - name: perish-worker
+        image: fossephate/betsy:latest
+        command: ["/bin/bash", "-c"]
+        args: ["python main.py --host 0.0.0.0 --port 8080 --bpow-nano-difficulty --work-urls https://pow.nano.to http://worker1.perish.co http://worker2.perish.co"]
+        ports:
+        - containerPort: 8080
+          name: api
+        env:
+        - name: NANO2_KEY
+          valueFrom:
+            secretKeyRef:
+              name: my-secret
+              key: NANO2_KEY
+      # nodeSelector:
+      #   node-pool: workers
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: worker-service
+  annotations:
+    service.beta.kubernetes.io/do-loadbalancer-name: "workers"
+    service.beta.kubernetes.io/do-loadbalancer-size-unit: "1"
+  #   # kubernetes.digitalocean.com/load-balancer-id: "89601a6b-9be4-4ad8-b52c-37bc23810481"
+  #   service.beta.kubernetes.io/do-loadbalancer-disable-lets-encrypt-dns-records: "false"
+  #   # service.beta.kubernetes.io/do-loadbalancer-protocol: "http"
+  #   service.beta.kubernetes.io/do-loadbalancer-protocol: "https"
+  #   service.beta.kubernetes.io/do-loadbalancer-tls-ports: "443"
+  #   service.beta.kubernetes.io/do-loadbalancer-certificate-id: "c85e86c3-f1e2-4b0b-8b25-ff39eb201f4c"
+  #   service.beta.kubernetes.io/do-loadbalancer-disable-lets-encrypt-dns-records: "false"
+  #   # service.beta.kubernetes.io/do-loadbalancer-healthcheck-port: "80"
+  #   # service.beta.kubernetes.io/do-loadbalancer-enable-proxy-protocol: "true"
+  #   service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol: "http"
+  #   service.beta.kubernetes.io/do-loadbalancer-healthcheck-path: "/health"
+  #   service.beta.kubernetes.io/do-loadbalancer-enable-backend-keepalive: "true"
+spec:
+  type: LoadBalancer
+  selector:
+    app: perish-worker
+  ports:
+    - port: 80
+      targetPort: 8080

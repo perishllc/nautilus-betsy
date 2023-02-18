@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: betsy-deployment
+  # annotations:
+  #   # kubernetes.digitalocean.com/load-balancer-id: "workers"
+  #   service.beta.kubernetes.io/do-loadbalancer-name: "workers"
+  #   service.beta.kubernetes.io/do-loadbalancer-disable-lets-encrypt-dns-records: "false"
+  #   # service.beta.kubernetes.io/do-loadbalancer-size-unit: "1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: perish-worker
+  template:
+    metadata:
+      labels:
+        app: perish-worker
+    spec:
+      containers:
+      - name: perish-worker
+        image: fossephate/betsy:latest
+        command: ["/bin/bash", "-c"]
+        args: ["python main.py --host 0.0.0.0 --port 30100 --bpow-nano-difficulty"]
+        ports:
+        - containerPort: 30100
+          name: api
+        # env:
+        #   - name: REDIS_HOST
+        #     value: redis.redis
+        #   - name: REDIS_DB
+        #     value: "1"
+        #   - name: BPOW_KEY
+        #     valueFrom:
+        #       secretKeyRef:
+        #         name: betsy
+        #         key: bpow_key
+      # nodeSelector:
+      #   node-pool: workers
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: workers
+  annotations:
+    service.beta.kubernetes.io/do-loadbalancer-name: "workers"
+    # kubernetes.digitalocean.com/load-balancer-id: "89601a6b-9be4-4ad8-b52c-37bc23810481"
+    service.beta.kubernetes.io/do-loadbalancer-size-unit: "1"
+    service.beta.kubernetes.io/do-loadbalancer-disable-lets-encrypt-dns-records: "false"
+    # service.beta.kubernetes.io/do-loadbalancer-protocol: "http"
+    service.beta.kubernetes.io/do-loadbalancer-protocol: "https"
+    service.beta.kubernetes.io/do-loadbalancer-tls-ports: "443"
+    service.beta.kubernetes.io/do-loadbalancer-certificate-id: "c85e86c3-f1e2-4b0b-8b25-ff39eb201f4c"
+    service.beta.kubernetes.io/do-loadbalancer-disable-lets-encrypt-dns-records: "false"
+    # service.beta.kubernetes.io/do-loadbalancer-healthcheck-port: "80"
+    # service.beta.kubernetes.io/do-loadbalancer-enable-proxy-protocol: "true"
+    service.beta.kubernetes.io/do-loadbalancer-healthcheck-protocol: "http"
+    service.beta.kubernetes.io/do-loadbalancer-healthcheck-path: "/health"
+    service.beta.kubernetes.io/do-loadbalancer-enable-backend-keepalive: "true"
+spec:
+  type: LoadBalancer
+  selector:
+    app: perish-worker
+  ports:
+    # - name: http
+    #   protocol: TCP
+    #   port: 80
+    #   targetPort: 80
+    - name: https
+      protocol: TCP
+      port: 443
+      # targetPort: 80
+      nodePort:  30100
+
+  # ports:
+  #   - name: https
+  #     protocol: TCP
+  #     port: 443
+  #     # nodePort:  30100
+  #     targetPort: 80

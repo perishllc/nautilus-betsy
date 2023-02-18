@@ -1,0 +1,1 @@
+sudo kubectl replace -f ./kubernetes/deployment_service.yaml
