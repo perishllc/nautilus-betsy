@@ -26,8 +26,13 @@ spec:
         - name: NANO2_KEY
           valueFrom:
             secretKeyRef:
-              name: my-secret
+              name: nautilus-betsy
               key: NANO2_KEY
+        - name: BPOW_KEY
+          valueFrom:
+            secretKeyRef:
+              name: nautilus-betsy
+              key: BPOW_KEY
       # nodeSelector:
       #   node-pool: workers
 ---
